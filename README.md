@@ -65,3 +65,39 @@ Para testar este projeto em seu ambiente de desenvolvimento, siga os passos abai
     ```
 
 ## 📂 Estrutura de Arquivos
+
+Para organizar o projeto, a seguinte estrutura de pastas e arquivos deve ser utilizada:
+
+<pre>
+/loterias
+├── assets/
+│   ├── style.css
+│   └── script.js
+├── db/
+│   └── dados.sqlite
+├── includes/
+│   ├── conferir.php
+│   ├── db.php
+│   ├── historico.php
+│   ├── sequencias.php
+│   └── ver_resultado.php
+├── criar_banco.php
+└── index.php
+</pre>
+
+**Explicação da Estrutura:**
+
+* **`/` (raiz do projeto `loterias`):** Contém os arquivos principais da aplicação.
+    * `criar_banco.php`: Script para inicializar o banco de dados SQLite.
+    * `index.php`: Página principal da aplicação web.
+* **`assets/`:** Armazena os arquivos estáticos do frontend.
+    * `style.css`: Arquivo de folha de estilos CSS para a apresentação.
+    * `script.js`: Arquivo com a lógica JavaScript para interatividade.
+* **`db/`:** Contém o arquivo do banco de dados.
+    * `dados.sqlite`: O banco de dados SQLite onde as informações serão armazenadas.
+* **`includes/`:** Guarda os arquivos PHP com a lógica de backend e funcionalidades específicas.
+    * `conferir.php`: Lógica para conferir os resultados dos concursos.
+    * `db.php`: Arquivo com a função para conectar ao banco de dados.
+    * `historico.php`: (Embora não tenhamos criado um arquivo separado para isso, a lógica de histórico está em `index.php` e `ver_resultado.php`).
+    * `sequencias.php`: Lógica para gerenciar as sequências de jogos (salvar, editar, listar, excluir/desativar).
+    * `ver_resultado.php`: Script para exibir os detalhes de um concurso específico do histórico.
