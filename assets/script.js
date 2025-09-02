@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
     const historicoTab = document.getElementById("tab-historico");
     const detalhesResultadoHistoricoContainer = document.getElementById("detalhes-resultado-historico");
     if (historicoTab && detalhesResultadoHistoricoContainer) {
@@ -30,6 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
     const formConferir = document.getElementById('form-conferir');
     if (formConferir) {
         const btnConferir = document.getElementById('btn-conferir');
@@ -40,7 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const errorMsgConferir = document.getElementById('conferir-error-msg');
         const conferenciaImediataContainer = document.getElementById('conferencia-imediata-resultado');
         const validarFormConferir = () => {
-            let isValid = true, erros = [];
+            let isValid = true;
+            let erros = [];
             const tipoJogo = tipoJogoSelectConferir.value;
             if (tipoJogo === 'lotofacil' && inputConcurso.value.trim().length < 4) {
                 isValid = false;
@@ -116,52 +119,100 @@ document.addEventListener("DOMContentLoaded", () => {
         formConferir.addEventListener('input', atualizarEstiloBotaoConferir);
         atualizarEstiloBotaoConferir();
     }
+
     const formSalvar = document.getElementById('form-salvar-sequencia');
     if (formSalvar) {
-        const inputNome = document.getElementById('salvar-nome'), selectTipoJogo = document.getElementById('salvar-tipo-jogo'), gradeContainer = document.getElementById('grade-numeros-container'), contadorLabel = document.getElementById('contador-selecionados'), hiddenInputNumeros = document.getElementById('salvar-numeros-hidden'), btnSalvar = document.getElementById('btn-salvar-sequencia'), errorMsgSalvar = document.getElementById('salvar-error-msg');
+        const inputNome = document.getElementById('salvar-nome');
+        const selectTipoJogo = document.getElementById('salvar-tipo-jogo');
+        const gradeContainer = document.getElementById('grade-numeros-container');
+        const contadorLabel = document.getElementById('contador-selecionados');
+        const hiddenInputNumeros = document.getElementById('salvar-numeros-hidden');
+        const btnSalvar = document.getElementById('btn-salvar-sequencia');
+        const errorMsgSalvar = document.getElementById('salvar-error-msg');
+
         let numerosSelecionados = [];
-        const regrasJogo = { 'lotofacil': { total: 25, min: 15, max: 20 }, 'mega-sena': { total: 60, min: 6, max: 15 } };
-        const validarFormSalvar = () => {
-            const nomePreenchido = inputNome.value.trim() !== '', tipo = selectTipoJogo.value, config = regrasJogo[tipo], minimoNumerosAtingido = numerosSelecionados.length >= config.min, isValid = nomePreenchido && minimoNumerosAtingido;
-            return { isValid, nomePreenchido, minimoNumerosAtingido, config };
+        const regrasJogo = {
+            'lotofacil': { total: 25, min: 15, max: 20 },
+            'megasena': { total: 60, min: 6, max: 15 }
         };
-        const atualizarEstiloBotaoSalvar = () => {
-            const { isValid } = validarFormSalvar();
+
+        const atualizarUICompleta = () => {
+            const tipo = selectTipoJogo.value;
+            const config = regrasJogo[tipo];
+
+            // Atualiza input
+            numerosSelecionados.sort((a, b) => a - b);
+            hiddenInputNumeros.value = numerosSelecionados.join(',');
+
+            // Atualiza contador
+            contadorLabel.textContent = `${numerosSelecionados.length} / ${config.max} números selecionados`;
+
+            // Valida formulário; atualiza botão
+            const nomePreenchido = inputNome.value.trim() !== '';
+            const minimoNumerosAtingido = numerosSelecionados.length >= config.min;
+            const isValid = nomePreenchido && minimoNumerosAtingido;
             btnSalvar.classList.toggle('valid', isValid);
             btnSalvar.classList.toggle('invalid', !isValid);
             errorMsgSalvar.textContent = '';
         };
+
+        const toggleSelecaoNumero = (btn, numero, config) => {
+            const jaSelecionado = numerosSelecionados.includes(numero);
+
+            if (jaSelecionado) {
+                numerosSelecionados = numerosSelecionados.filter(n => n !== numero);
+                btn.classList.remove('selecionado');
+            } else {
+                if (numerosSelecionados.length < config.max) {
+                    numerosSelecionados.push(numero);
+                    btn.classList.add('selecionado');
+                } else {
+                    alert(`Você pode selecionar no máximo ${config.max} números.`);
+                }
+            }
+            atualizarUICompleta();
+        };
+
         const gerarGrade = () => {
             gradeContainer.innerHTML = '';
-            const tipo = selectTipoJogo.value, config = regrasJogo[tipo];
+            const tipo = selectTipoJogo.value;
+            const config = regrasJogo[tipo];
+
             gradeContainer.className = (tipo === 'lotofacil' ? 'grid-lotofacil' : 'grid-megasena');
+
             for (let i = 1; i <= config.total; i++) {
                 const numeroBtn = document.createElement('div');
                 numeroBtn.className = 'numero-btn';
                 numeroBtn.textContent = i.toString().padStart(2, '0');
-                numeroBtn.dataset.numero = i;
-                numeroBtn.addEventListener('click', () => toggleSelecaoNumero(numeroBtn, config));
+
+                if (numerosSelecionados.includes(i)) {
+                    numeroBtn.classList.add('selecionado');
+                }
+
+                numeroBtn.addEventListener('click', () => toggleSelecaoNumero(numeroBtn, i, config));
                 gradeContainer.appendChild(numeroBtn);
             }
-            atualizarEstiloBotaoSalvar();
+            atualizarUICompleta();
         };
-        const toggleSelecaoNumero = (btn, config) => {
-            const numero = parseInt(btn.dataset.numero), jaSelecionado = numerosSelecionados.includes(numero);
-            if (jaSelecionado) {
-                numerosSelecionados = numerosSelecionados.filter(n => n !== numero);
-            } else if (numerosSelecionados.length < config.max) {
-                numerosSelecionados.push(numero);
-            }
-            btn.classList.toggle('selecionado', !jaSelecionado && numerosSelecionados.includes(numero));
-            numerosSelecionados.sort((a, b) => a - b);
-            hiddenInputNumeros.value = numerosSelecionados.join(',');
-            contadorLabel.textContent = `${numerosSelecionados.length} / ${config.max} números selecionados`;
-            atualizarEstiloBotaoSalvar();
+
+        const carregarDadosParaEdicao = (dados) => {
+            inputNome.value = dados.nome;
+            selectTipoJogo.value = dados.tipo_jogo;
+            numerosSelecionados = dados.numeros.split(',').map(n => parseInt(n));
+            gerarGrade();
         };
+
+        selectTipoJogo.addEventListener('change', () => {
+            numerosSelecionados = [];
+            gerarGrade();
+        });
+
+        inputNome.addEventListener('input', atualizarUICompleta);
+
         formSalvar.addEventListener('submit', (event) => {
             inputNome.classList.remove('input-error');
             gradeContainer.classList.remove('input-error');
-            const { isValid, nomePreenchido, minimoNumerosAtingido, config } = validarFormSalvar();
+            const { isValid, nomePreenchido, minimoNumerosAtingido } = validarFormSalvar();
             if (!isValid) {
                 event.preventDefault();
                 errorMsgSalvar.textContent = 'Verifique os campos destacados.';
@@ -169,22 +220,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!minimoNumerosAtingido) gradeContainer.classList.add('input-error');
             }
         });
-        selectTipoJogo.addEventListener('change', () => {
-            numerosSelecionados = [];
-            hiddenInputNumeros.value = '';
-            gerarGrade();
-            contadorLabel.textContent = `0 / ${regrasJogo[selectTipoJogo.value].max} números selecionados`;
-            atualizarEstiloBotaoSalvar();
-        });
-        inputNome.addEventListener('input', atualizarEstiloBotaoSalvar);
+
         gerarGrade();
-        contadorLabel.textContent = `0 / ${regrasJogo[selectTipoJogo.value].max} números selecionados`;
-        atualizarEstiloBotaoSalvar();
     }
+
     const allAccordionHeaders = document.querySelectorAll(".accordion-header");
     allAccordionHeaders.forEach(header => {
         header.addEventListener("click", () => {
-            const accordionContent = header.nextElementSibling, icon = header.querySelector('.accordion-icon');
+            const accordionContent = header.nextElementSibling;
+            const icon = header.querySelector('.accordion-icon');
             header.parentElement.classList.toggle("active");
             if (accordionContent.style.maxHeight) {
                 accordionContent.style.maxHeight = null;
@@ -195,6 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
+
     const historyTabsContainer = document.querySelector(".history-tabs-nav");
     if (historyTabsContainer) {
         historyTabsContainer.addEventListener("click", (event) => {
@@ -207,9 +252,16 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
     const tabGerenciar = document.getElementById('tab-gerenciar');
     if (tabGerenciar) {
-        const formSalvar = document.getElementById('form-salvar-sequencia'), inputNome = document.getElementById('salvar-nome'), selectTipoJogo = document.getElementById('salvar-tipo-jogo'), btnSalvar = document.getElementById('btn-salvar-sequencia'), innerTabsNav = document.querySelector(".inner-tabs-nav"), cadastrarTabLink = document.getElementById('cadastrar-tab-link'), btnCancelarEdicao = document.getElementById('btn-cancelar-edicao');
+        const formSalvar = document.getElementById('form-salvar-sequencia');
+        const inputNome = document.getElementById('salvar-nome');
+        const selectTipoJogo = document.getElementById('salvar-tipo-jogo');
+        const btnSalvar = document.getElementById('btn-salvar-sequencia');
+        const innerTabsNav = document.querySelector(".inner-tabs-nav");
+        const cadastrarTabLink = document.getElementById('cadastrar-tab-link');
+        const btnCancelarEdicao = document.getElementById('btn-cancelar-edicao');
         const switchToInnerTab = (tabId) => {
             innerTabsNav.querySelectorAll(".inner-tab-link").forEach(tab => tab.classList.remove("active"));
             document.querySelectorAll(".inner-tabs-content .inner-tab-content").forEach(content => content.classList.remove("active"));
@@ -221,12 +273,14 @@ document.addEventListener("DOMContentLoaded", () => {
             let idInput = formSalvar.querySelector('input[name="id_sequencia"]');
             if (idInput) idInput.remove();
             btnSalvar.textContent = 'Salvar';
-            cadastrarTabLink.textContent = 'Cadastrar';
+            cadastrarTabLink.textContent = 'Cadastrar Nova';
             btnCancelarEdicao.classList.add('hidden');
             selectTipoJogo.dispatchEvent(new Event('change'));
         };
         tabGerenciar.addEventListener('click', (event) => {
-            const target = event.target, sequenciaId = target.dataset.id, listItem = target.closest('li[data-sequencia-id]');
+            const target = event.target;
+            const sequenciaId = target.dataset.id;
+            const listItem = target.closest('li[data-sequencia-id]');
             if (target.classList.contains('excluir')) {
                 if (confirm('Tem certeza que deseja desativar esta sequência? Ela ficará salva no histórico.')) {
                     const formData = new FormData();
@@ -276,7 +330,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         setTimeout(() => {
                             const numerosParaSelecionar = data.numeros.split(',').map(n => parseInt(n));
                             tabGerenciar.querySelectorAll('#grade-numeros-container .numero-btn').forEach(btn => {
-                                const num = parseInt(btn.dataset.numero), deveEstarSelecionado = numerosParaSelecionar.includes(num), estaSelecionado = btn.classList.contains('selecionado');
+                                const num = parseInt(btn.dataset.numero);
+                                const deveEstarSelecionado = numerosParaSelecionar.includes(num);
+                                const estaSelecionado = btn.classList.contains('selecionado');
                                 if (deveEstarSelecionado !== estaSelecionado) btn.click();
                             });
                         }, 50);
