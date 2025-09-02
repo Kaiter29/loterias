@@ -1,5 +1,6 @@
 <?php
 require_once 'db.php';
+
 ?>
 <style>
     .resultado-header { padding-bottom: 1em; border-bottom: 2px solid #eee; margin-bottom: 1em; }
@@ -16,7 +17,10 @@ require_once 'db.php';
     .acertos-box strong { font-size: 1.2em; color: #333; }
     .acertos-box strong.acertos-premio { color: #28a745; font-weight: bold; }
 </style>
+
 <?php
+global $pdo;
+
 $tipo = $_GET['tipo'] ?? '';
 $concurso = intval($_GET['concurso'] ?? 0);
 
@@ -25,23 +29,25 @@ if (!$tipo || !$concurso) {
     exit;
 }
 
-$db = conectarBanco();
+if (!$pdo) {
+    echo "<p>Erro: Não foi possível conectar ao banco de dados.</p>";
+    exit;
+}
 
-$infoSorteioStmt = $db->prepare("SELECT numeros, dia_jogo FROM resultados WHERE num_jogo = ? AND tipo_jogo = ? LIMIT 1");
-$infoSorteioStmt->bindValue(1, $concurso);
-$infoSorteioStmt->bindValue(2, $tipo);
-$infoSorteio = $infoSorteioStmt->execute()->fetchArray(SQLITE3_ASSOC);
+$infoSorteioStmt = $pdo->prepare("SELECT numeros, dia_jogo FROM resultados WHERE num_jogo = ? AND tipo_jogo = ? LIMIT 1");
+$infoSorteioStmt->execute([$concurso, $tipo]);
+$infoSorteio = $infoSorteioStmt->fetch();
 
 if (!$infoSorteio) {
     echo "<div class='resultado-header'><h3>Concurso $concurso – " . ucfirst($tipo) . "</h3></div>";
-    echo "<p>Nenhum resultado encontrado para este concurso no banco de dados.</p>";
+    echo "<p>Nenhum resultado encontrado para este concurso no histórico.</p>";
     exit;
 }
 
 $sorteados = array_map('intval', explode(',', $infoSorteio['numeros']));
 $dataSorteio = 'Data indisponível';
 if ($infoSorteio['dia_jogo']) {
-    $dateObj = DateTime::createFromFormat('Y-m-d', $infoSorteio['dia_jogo']);
+    $dateObj = new DateTime($infoSorteio['dia_jogo']);
     if ($dateObj) {
         $dataSorteio = $dateObj->format('d/m/Y');
     }
@@ -57,42 +63,39 @@ foreach ($sorteados as $numero) {
 echo "  </div>";
 echo "</div>";
 
-$stmt = $db->prepare("
+$stmt = $pdo->prepare("
     SELECT num_acertos, sequencia_nome, numeros_jogados
     FROM resultados
     WHERE num_jogo = ? AND tipo_jogo = ?
     ORDER BY sequencia_nome ASC
 ");
-$stmt->bindValue(1, $concurso);
-$stmt->bindValue(2, $tipo);
-$res = $stmt->execute();
+$stmt->execute([$concurso, $tipo]);
+$results = $stmt->fetchAll();
 
-$sequenciasEncontradas = 0;
-while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-    $sequenciasEncontradas++;
-    $jogados = array_map('intval', explode(',', $row['numeros_jogados']));
-    $num_acertos = (int)$row['num_acertos'];
-
-    echo "<div class='resultado-card'>";
-    echo "  <h4>{$row['sequencia_nome']}</h4>";
-    echo "  <div class='numeros-jogados'>";
-
-    foreach ($jogados as $n) {
-        $classe_cor = in_array($n, $sorteados) ? 'acerto' : 'erro';
-        echo "<span class='{$classe_cor}'>".str_pad($n, 2, '0', STR_PAD_LEFT)."</span>";
-    }
-    
-    echo "  </div>";
-    
-    $classe_acertos = $num_acertos >= 11 ? 'acertos-premio' : '';
-
-    echo "  <div class='acertos-box'>";
-    echo "      Acertos: <strong class='{$classe_acertos}'>{$num_acertos}</strong>";
-    echo "  </div>";
-
-    echo "</div>";
-}
-
-if ($sequenciasEncontradas === 0) {
+if (empty($results)) {
     echo "<p>Nenhuma sequência sua foi conferida para este concurso.</p>";
+} else {
+    foreach ($results as $row) {
+        $jogados = array_map('intval', explode(',', $row['numeros_jogados']));
+        $num_acertos = (int)$row['num_acertos'];
+
+        echo "<div class='resultado-card'>";
+        echo "  <h4>{$row['sequencia_nome']}</h4>";
+        echo "  <div class='numeros-jogados'>";
+
+        foreach ($jogados as $n) {
+            $classe_cor = in_array($n, $sorteados) ? 'acerto' : 'erro';
+            echo "<span class='{$classe_cor}'>".str_pad($n, 2, '0', STR_PAD_LEFT)."</span>";
+        }
+        
+        echo "  </div>";
+        
+        $classe_acertos = $num_acertos >= 11 ? 'acertos-premio' : '';
+
+        echo "  <div class='acertos-box'>";
+        echo "      Acertos: <strong class='{$classe_acertos}'>{$num_acertos}</strong>";
+        echo "  </div>";
+
+        echo "</div>";
+    }
 }
