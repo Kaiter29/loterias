@@ -33,7 +33,6 @@ $dataApuracao = $dadosAPI['dataApuracao'] ?? null;
 
 $resultadosFinais = [];
 
-// Converte a data para o formato do banco de dados (Y-m-d)
 $dataParaBanco = null;
 if ($dataApuracao) {
     $dateObj = DateTime::createFromFormat('d/m/Y', $dataApuracao);
