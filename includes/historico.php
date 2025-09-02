@@ -2,80 +2,100 @@
 require_once 'db.php';
 
 function pegarUltimoConcursoConferido() {
-    $db = conectarBanco();
-    $resultado = $db->querySingle("SELECT MAX(num_jogo) FROM resultados");
-    return $resultado ?? '';
+    global $pdo;
+    if (!$pdo) {
+        return '';
+    }
+    try {
+        $stmt = $pdo->query("SELECT num_jogo FROM resultados ORDER BY created DESC LIMIT 1");
+        $result = $stmt->fetchColumn();
+        return $result ?: '';
+    } catch (PDOException $e) {
+        return '';
+    }
 }
 
-/* ultima alteração realizada */
 function mostrarHistorico() {
-    $db = conectarBanco();
-
-    $tipos_res = $db->query("SELECT DISTINCT tipo_jogo FROM resultados ORDER BY tipo_jogo ASC");
-    
-    $tipos_de_jogo = [];
-    while ($row = $tipos_res->fetchArray(SQLITE3_ASSOC)) {
-        $tipos_de_jogo[] = $row['tipo_jogo'];
+    global $pdo;
+    if (!$pdo) {
+        echo '<p>Nenhum histórico disponível.</p>';
+        return;
     }
+    try {
+        $stmt = $pdo->query("SELECT DISTINCT tipo_jogo FROM resultados ORDER BY tipo_jogo ASC");
+        $tiposJogos = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    if (empty($tipos_de_jogo)) {
-        echo "<p>Nenhum histórico encontrado.</p>";
+        if (empty($tiposJogos)) {
+            echo '<p>Nenhum histórico de conferências registrado ainda.</p>';
+            return;
+        }
+
+        echo '<div class="history-tabs-container">';
+        echo '  <div class="history-tabs-nav">';
+        $first = true;
+        foreach ($tiposJogos as $tipo) {
+            $label = ($tipo === 'lotofacil') ? 'Lotofácil' : (($tipo === 'megasena') ? 'Mega-Sena' : ucfirst($tipo));
+            echo '<button class="inner-tab-link ' . ($first ? 'active' : '') . '" data-tab="historico-' . $tipo . '">' . $label . '</button>';
+            $first = false;
+        }
+        echo '  </div>';
+
+        echo '  <div class="history-tabs-content">';
+        $first = true;
+        foreach ($tiposJogos as $tipo) {
+            echo '<div id="historico-' . $tipo . '" class="inner-tab-content ' . ($first ? 'active' : '') . '">';
+            $stmtTipo = $pdo->prepare("SELECT DISTINCT num_jogo, dia_jogo FROM resultados WHERE tipo_jogo = ? ORDER BY num_jogo DESC LIMIT 20");
+            $stmtTipo->execute([$tipo]);
+            $concursosDoTipo = $stmtTipo->fetchAll();
+            if(empty($concursosDoTipo)){
+                echo '<p>Nenhum concurso conferido para este jogo.</p>';
+            } else {
+                echo '<ul class="historico-lista">';
+                foreach ($concursosDoTipo as $concursoItem) {
+                    $data = $concursoItem['dia_jogo'] ? (new DateTime($concursoItem['dia_jogo']))->format('d/m/Y') : 'Data não informada';
+                    echo '<li data-tipo="' . htmlspecialchars($tipo) . '" data-concurso="' . htmlspecialchars($concursoItem['num_jogo']) . '">';
+                    echo 'Concurso ' . htmlspecialchars($concursoItem['num_jogo']) . ' - ' . $data;
+                    echo '</li>';
+                }
+                echo '</ul>';
+            }
+            echo '</div>';
+            $first = false;
+        }
+        echo '  </div>';
+        echo '</div>';
+
+    } catch (PDOException $e) {
+        echo '<p>Ocorreu um erro ao carregar o histórico.</p>';
+    }
+}
+
+function salvarHistoricoConferencia($id_sequencia, $concurso, $tipo, $sorteados, $jogados, $totalAcertos, $dataParaBanco) {
+    global $pdo;
+    if (!$pdo) return;
+
+    $stmt = $pdo->prepare("SELECT nome FROM sequencias WHERE id = ?");
+    $stmt->execute([$id_sequencia]);
+    $sequencia = $stmt->fetch();
+    if(!$sequencia) return;
+    
+    $stmtCheck = $pdo->prepare("SELECT id FROM resultados WHERE sequencia_id = ? AND num_jogo = ?");
+    $stmtCheck->execute([$id_sequencia, $concurso]);
+    if ($stmtCheck->fetch()) {
         return;
     }
 
-    echo '<div class="history-tabs-container">';
-    echo '  <div class="history-tabs-nav">';
-
-    foreach ($tipos_de_jogo as $index => $tipo) {
-        $active_class = ($index === 0) ? 'active' : '';
-        echo "<button class='tab-link {$active_class}' data-tab='tab-{$tipo}'>" . ucfirst($tipo) . "</button>";
-    }
-
-    echo '  </div>';
-    echo '  <div class="history-tabs-content">';
-
-    foreach ($tipos_de_jogo as $index => $tipo) {
-        $active_class = ($index === 0) ? 'active' : '';
-        echo "<div id='tab-{$tipo}' class='tab-content {$active_class}'>";
-
-        $stmt = $db->prepare("
-            SELECT num_jogo, dia_jogo, COUNT(*) as total
-            FROM resultados
-            WHERE tipo_jogo = :tipo
-            GROUP BY num_jogo, dia_jogo
-            ORDER BY num_jogo DESC
-            LIMIT 20
-        ");
-        $stmt->bindValue(':tipo', $tipo, SQLITE3_TEXT);
-        $res = $stmt->execute();
-
-        echo "<ul class='historico-lista'>";
-        
-        $hasResults = false;
-        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
-
-            $hasResults = true;
-            $dataStr = 'Data indisponível';
-            
-            if ($row['dia_jogo']) {
-                $dataObj = DateTime::createFromFormat('Y-m-d', $row['dia_jogo']);
-                if ($dataObj) $dataStr = $dataObj->format('d/m/Y');
-            }
-            
-            echo "<li data-concurso='{$row['num_jogo']}' data-tipo='{$tipo}'>";
-            echo "<strong>Concurso {$row['num_jogo']}</strong> – {$dataStr}<br>";
-            echo "<small>{$row['total']} sequência(s) conferida(s)</small>";
-            echo "</li>";
-        }
-
-        if (!$hasResults) {
-            echo "<li>Nenhum resultado para este jogo.</li>";
-        }
-
-        echo "</ul>";
-        echo "</div>";
-    }
-
-    echo '  </div>';
-    echo '</div>';
+    $stmtInsert = $pdo->prepare(
+        "INSERT INTO resultados (sequencia_id, num_jogo, tipo_jogo, numeros, dia_jogo, num_acertos, sequencia_nome, numeros_jogados) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+    $stmtInsert->execute([
+        $id_sequencia,
+        $concurso,
+        $tipo,
+        implode(',', $sorteados),
+        $dataParaBanco,
+        $totalAcertos,
+        $sequencia['nome'],
+        implode(',', $jogados)
+    ]);
 }
