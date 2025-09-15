@@ -9,7 +9,7 @@ O sistema foi desenvolvido com uma interface de abas para facilitar a navegaçã
 * **Conferência de Jogos:**
     * Consulta resultados de concursos diretamente da API da Caixa.
     * Permite selecionar múltiplas sequências salvas para conferir de uma só vez.
-    * Apresenta o resultado de forma instantânea (via AJAX), sem recarregar a página.
+    * Apresenta o resultado de forma instantânea (via AJAX), sem recarregar a página, com destaque visual para os acertos.
 
 * **Histórico de Conferências:**
     * Mantém um registro imutável de todas as conferências realizadas.
@@ -51,12 +51,8 @@ Para testar este projeto em seu ambiente de desenvolvimento, siga os passos abai
     ```
     Caso contrário, apenas copie a pasta do projeto para o diretório do seu servidor.
 
-2.  **Crie o Banco de Dados:**
-    Acesse o projeto pelo seu navegador. A primeira etapa é criar e popular o banco de dados. Para isso, acesse a seguinte URL:
-    ```
-    http://localhost/loterias/criar_banco.php
-    ```
-    Você deverá ver a mensagem "Banco de dados e tabelas criados/atualizados com sucesso!". Este passo só precisa ser feito uma vez.
+2.  **Inicialize o Banco de Dados (Automático):**
+    O banco de dados SQLite (`dados.sqlite`) e suas tabelas serão criados automaticamente na primeira vez que você acessar a aplicação. O sistema verifica a existência do arquivo `db/dados.sqlite`. Se ele não existir, `criar_banco.php` será executado para configurar o ambiente.
 
 3.  **Acesse a Aplicação:**
     Agora, você pode acessar a página principal do projeto:
@@ -68,36 +64,39 @@ Para testar este projeto em seu ambiente de desenvolvimento, siga os passos abai
 
 Para organizar o projeto, a seguinte estrutura de pastas e arquivos deve ser utilizada:
 
-<pre>
-/loterias
-├── assets/
-│   ├── style.css
-│   └── script.js
-├── db/
-│   └── dados.sqlite
-├── includes/
-│   ├── conferir.php
-│   ├── db.php
-│   ├── historico.php
-│   ├── sequencias.php
-│   └── ver_resultado.php
-├── criar_banco.php
-└── index.php
-</pre>
+* **`/loterias`** (raiz do projeto)
+    * `criar_banco.php`
+    * `index.php`
+    * **`assets/`**
+        * `style.css`
+        * `script.js`
+    * **`db/`**
+        * `dados.sqlite`
+    * **`includes/`**
+        * `conferir.php`
+        * `db.php`
+        * `historico.php`
+        * `sequencias.php`
+        * `ver_resultado.php`
 
 **Explicação da Estrutura:**
 
 * **`/` (raiz do projeto `loterias`):** Contém os arquivos principais da aplicação.
-    * `criar_banco.php`: Script para inicializar o banco de dados SQLite.
-    * `index.php`: Página principal da aplicação web.
+    * `criar_banco.php`: Script que inicializa o banco de dados SQLite e cria as tabelas se elas não existirem. É executado automaticamente na primeira carga.
+    * `index.php`: Página principal da aplicação web, que integra todas as funcionalidades.
 * **`assets/`:** Armazena os arquivos estáticos do frontend.
     * `style.css`: Arquivo de folha de estilos CSS para a apresentação.
-    * `script.js`: Arquivo com a lógica JavaScript para interatividade.
+    * `script.js`: Arquivo com a lógica JavaScript para interatividade (gerenciamento de abas, formulários, ações de sequência, etc.).
 * **`db/`:** Contém o arquivo do banco de dados.
-    * `dados.sqlite`: O banco de dados SQLite onde as informações serão armazenadas.
+    * `dados.sqlite`: O banco de dados SQLite onde as informações da aplicação são armazenadas.
 * **`includes/`:** Guarda os arquivos PHP com a lógica de backend e funcionalidades específicas.
-    * `conferir.php`: Lógica para conferir os resultados dos concursos.
-    * `db.php`: Arquivo com a função para conectar ao banco de dados.
-    * `historico.php`: (Embora não tenhamos criado um arquivo separado para isso, a lógica de histórico está em `index.php` e `ver_resultado.php`).
-    * `sequencias.php`: Lógica para gerenciar as sequências de jogos (salvar, editar, listar, excluir/desativar).
-    * `ver_resultado.php`: Script para exibir os detalhes de um concurso específico do histórico.
+    * `conferir.php`: Lógica para processar a conferência de resultados de concursos via API da Caixa.
+    * `db.php`: Arquivo essencial para estabelecer a conexão com o banco de dados SQLite.
+    * `historico.php`: Contém as funções PHP para manipular e exibir o histórico de conferências, incluindo `pegarUltimoConcursoConferido` e `salvarHistoricoConferencia`.
+    * `sequencias.php`: Lógica de backend para o gerenciamento CRUD (Criar, Ler, Atualizar, Desativar/Reativar) das sequências de jogos.
+    * `ver_resultado.php`: Script para buscar e formatar os detalhes de um concurso específico a partir do histórico para exibição.
+    * `conferir.php`: Lógica para processar a conferência de resultados de concursos via API da Caixa.
+    * `db.php`: Arquivo essencial para estabelecer a conexão com o banco de dados SQLite.
+    * `historico.php`: Contém as funções PHP para manipular e exibir o histórico de conferências, incluindo `pegarUltimoConcursoConferido` e `salvarHistoricoConferencia`.
+    * `sequencias.php`: Lógica de backend para o gerenciamento CRUD (Criar, Ler, Atualizar, Desativar/Reativar) das sequências de jogos.
+    * `ver_resultado.php`: Script para buscar e formatar os detalhes de um concurso específico a partir do histórico para exibição.
